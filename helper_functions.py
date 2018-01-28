@@ -13,6 +13,8 @@ import sys
 
 if VIBRATE:
     import vibrate
+    vibration = vibrate.Vibration()
+
 
 def shutdown_vibration():
     if VIBRATE:
@@ -126,7 +128,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         directions = tracker.returnDirections()
         
         if VIBRATE:
-            vibrate.perform_output(ids, directions)
+            vibration.perform_output(ids, directions)
         
         frame_tracking = frame.copy()
         frame_tracking = drawTracking(frame_tracking, ids, directions)

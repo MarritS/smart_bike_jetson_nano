@@ -11,6 +11,8 @@ import numpy as np
 import shared_space_detector
 from scipy.ndimage import gaussian_filter
 from RoadType import RoadType
+import multiprocessing as mp
+from itertools import product
 DEBUG = False
 
 
@@ -209,6 +211,22 @@ def blur_frame(frame):
     return blurred
     
             
+def findAllSections(frame_road, frame_bike, frame_grass, rown):
+     row = frame_road[rown, :, 0]
+     sections_road = return_sections(row) 
+        
+     row = frame_bike[rown, :, 0]
+     sections_bike = return_sections(row) 
+    
+     row = frame_grass[rown, :, 0]
+     sections_grass = return_sections(row) 
+
+     roadType = comparison(sections_road, sections_bike, sections_grass, rown)
+     return roadType
+ 
+def returnFive(frame1, frame2, frame3, nr):
+    return 5
+
 def draw_lines(frame_road, frame_bike, frame_grass):
     rown = 0
     cnt_separated = 0
@@ -221,31 +239,24 @@ def draw_lines(frame_road, frame_bike, frame_grass):
     frame_grass = filter_area(frame_grass)
     
     
+    frame_numbers = np.arange(0, 200, 10).tolist()
     
-    while rown < 200:
-        row = frame_road[rown, :, 0]
-        sections_road = return_sections(row) 
-        
-        row = frame_bike[rown, :, 0]
-        sections_bike = return_sections(row) 
-        
-        row = frame_grass[rown, :, 0]
-        sections_grass = return_sections(row) 
+    size = len(frame_numbers)
+    frames_road = [frame_road for i in range(size)]
+    frames_bike = [frame_bike for i in range(size)]
+    frames_grass = [frame_grass for i in range(size)]
+    test = zip(frames_road, frames_bike, frames_grass, frame_numbers)
+    res = list(test)
     
-        
-        
-        roadType = comparison(sections_road, sections_bike, sections_grass, rown)
-        if roadType == RoadType.SEPARATED:
-            cnt_separated += 1
-        elif roadType == RoadType.SHARED:
-            cnt_shared +=1
-        elif roadType == RoadType.UNKNOWN:
-            cnt_unknown += 1
+    pool = mp.Pool(2)
+    results = pool.starmap(findAllSections, res)
+    pool.close() 
+    pool.join()
     
-       
-           
-        
-        rown += 1
+    cnt_separated = results.count(RoadType.SEPARATED)
+    cnt_shared = results.count(RoadType.SHARED)
+    cnt_unknown = results.count(RoadType.UNKNOWN)
+    
       
     total = cnt_shared + cnt_unknown + cnt_separated
     prop_shared = cnt_shared/total
