@@ -11,20 +11,30 @@ Created on Thu Apr 15 14:30:34 2021
 This script demonstrates how to do real-time object detection with
 TensorRT optimized YOLO engine.
 """
+from utils.yolo_with_plugins import get_input_shape, TrtYOLO
+import cv2
 
+
+from utils.camera import add_camera_args, Camera
+from utils.visualization import BBoxVisualization
 
 import os
 import time
 import argparse
 
-import cv2
-import pycuda.autoinit  # This is needed for initializing CUDA driver
 
-from utils.yolo_classes import get_cls_dict
-from utils.camera import add_camera_args, Camera
+import pycuda.autoinit  # This is needed for initializing CUDA driver
+import numpy
+
+
+
 from utils.display import open_window, set_display, show_fps
-from utils.visualization import BBoxVisualization
-from utils.yolo_with_plugins import get_input_shape, TrtYOLO
+
+
+import CentroidTracker
+from utils.yolo_classes import get_cls_dict
+
+
 
 
 WINDOW_NAME = 'TrtYOLODemo'
@@ -79,6 +89,8 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
     framecounter = 0
     frameskip = round(30/SIMULATED_FPS)
     
+    tracker = CentroidTracker.CentroidTracker()
+    
     while True:
         if cv2.getWindowProperty(WINDOW_NAME, 0) < 0:
             break
@@ -87,12 +99,12 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
             break
         
         if CAMERA:
-            img = detect(img, trt_yolo, conf_th, vis, fps)
+            img = detect(img, trt_yolo, conf_th, vis, fps, tracker)
             cv2.imshow(WINDOW_NAME, img)
             writer.write(img)
         elif framecounter % frameskip == 0:
             print(framecounter)
-            img = detect(img, trt_yolo, conf_th, vis, fps)
+            img = detect(img, trt_yolo, conf_th, vis, fps, tracker)
             cv2.imshow(WINDOW_NAME, img)
             writer.write(img)
         
@@ -110,11 +122,34 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
             set_display(WINDOW_NAME, full_scrn)
         
 
-def detect(img, trt_yolo, conf_th, vis, fps):
+def detect(img, trt_yolo, conf_th, vis, fps, tracker):
      boxes, confs, clss = trt_yolo.detect(img, conf_th)
-     img = vis.draw_bboxes(img, boxes, confs, clss)
+     
+     inputCentroids = numpy.zeros((len(boxes), 2), dtype = "int" )
+     for (i, (startX, startY, endX, endY)) in enumerate(boxes):
+         cX = int((startX + endX) / 2.0)
+         cY = int((startY + endY) / 2.0)
+         inputCentroids[i] = (cX, cY)
+     
+     objects = tracker.update(boxes)
+     
+     tracked_indexes = get_tracked_indexes(objects, inputCentroids)
+     
+     img = vis.draw_bboxes(img, boxes, confs, tracked_indexes)
      img = show_fps(img, fps)
      return img
+ 
+def get_tracked_indexes(objects, inputCentroids):
+    ids = []
+    for inputCentroid in inputCentroids:
+        for key, value in objects.items():
+            if (value==inputCentroid).all():
+                ids.append(key)
+
+    return ids
+                
+                
+                
 
 
 def main():
