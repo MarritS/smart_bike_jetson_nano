@@ -24,7 +24,7 @@ import argparse
 
 
 import pycuda.autoinit  # This is needed for initializing CUDA driver
-import numpy
+import numpy as np
 
 
 
@@ -39,10 +39,15 @@ from utils.yolo_classes import get_cls_dict
 
 WINDOW_NAME = 'TrtYOLODemo'
 CAMERA = False
-VIDEO_FILE = "/home/marrit/Videos/00108.mp4" 
+VIDEO_FILE = "/home/marrit/Videos/city_moving2.mp4" 
 SIMULATED_FPS = 7
 
+colors = np.zeros([3,3])
+colors[2] = [0, 0, 255]
+colors[1] = [50, 50, 50]
+colors[0] = [255, 0, 0]
 
+tracker = CentroidTracker.CentroidTracker()
  
 
 
@@ -73,6 +78,31 @@ def parse_args():
         args = parser.parse_args(['--video', VIDEO_FILE])
     return args
 
+def drawTracking(img, objects, boxes, rects):
+    ids = []
+    boxesList = boxes.tolist()
+    rectcounter = 0
+
+    for inputCentroid in boxesList:
+        rectcounter=0
+        directions = tracker.returnDirections()
+
+        for key, value in objects.items():
+            if(value==inputCentroid).all():
+                rectcounter +=1
+                if (rectcounter > 1):
+                    print(' Error')
+                index = boxesList.index(inputCentroid)
+                rect = rects[index]
+                direction = directions[key]
+                p1 = (int(rect[0]), int(rect[1]))
+                p2 = (int(rect[2]), int(rect[3]))
+                rectcounter +=1
+                cv2.rectangle(img, p1, p2, colors[direction+1], 2)
+                cv2.putText(img, str(key), (p1[0], p1[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50, 255, 50), 2)
+                break;
+    return img
+
 
 def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
     """Continuously capture images from camera and do object detection.
@@ -89,7 +119,7 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
     framecounter = 0
     frameskip = round(30/SIMULATED_FPS)
     
-    tracker = CentroidTracker.CentroidTracker()
+
     
     while True:
         if cv2.getWindowProperty(WINDOW_NAME, 0) < 0:
@@ -103,7 +133,6 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
             cv2.imshow(WINDOW_NAME, img)
             writer.write(img)
         elif framecounter % frameskip == 0:
-            print(framecounter)
             img = detect(img, trt_yolo, conf_th, vis, fps, tracker)
             cv2.imshow(WINDOW_NAME, img)
             writer.write(img)
@@ -124,20 +153,50 @@ def loop_and_detect(cam, trt_yolo, conf_th, vis, writer):
 
 def detect(img, trt_yolo, conf_th, vis, fps, tracker):
      boxes, confs, clss = trt_yolo.detect(img, conf_th)
-     
-     inputCentroids = numpy.zeros((len(boxes), 2), dtype = "int" )
+
+     img_detection = img.copy()
+     img_tracking = img.copy()
+     poststamps=[]
+     rects=[]
+     entering = []
+     leaving = []
+     inputCentroids = np.zeros((len(boxes), 2), dtype = "int" )
      for (i, (startX, startY, endX, endY)) in enumerate(boxes):
          cX = int((startX + endX) / 2.0)
          cY = int((startY + endY) / 2.0)
          inputCentroids[i] = (cX, cY)
+
+         x = int(startX)
+         y = int(startY)
+         w = int(endX-startX)
+         h = int(endY-startY)
+
+         leaving.append(False)
+         entering.append(False)
+         if x<0 :
+             entering[-1] = True
+             x=0
+         if x > img.shape[1]-8:
+             leaving[-1] = True
+         if y<0:
+              y = 0
+         if y+h>img.shape[0]-8:
+              if x>int(img.shape[1]/2):
+                  leaving[-1] = True
+              else:
+                  entering[-1] = True
+         
+
+         poststamps.append(img[y:y+h,x:x+w])
      
-     objects = tracker.update(boxes)
+     ids = tracker.update(boxes, clss, poststamps, leaving, entering)
      
-     tracked_indexes = get_tracked_indexes(objects, inputCentroids)
+     #tracked_indexes = get_tracked_indexes(objects, inputCentroids)
      
-     img = vis.draw_bboxes(img, boxes, confs, tracked_indexes)
+     img_detection = vis.draw_bboxes(img, boxes, confs, clss)
+     img_tracking = drawTracking(img_tracking, ids, inputCentroids, boxes)
      img = show_fps(img, fps)
-     return img
+     return img_tracking
  
 def get_tracked_indexes(objects, inputCentroids):
     ids = []
