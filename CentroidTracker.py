@@ -1,48 +1,27 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 29 10:42:45 2021
-
-@author: marri
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Apr 27 10:15:07 2021
-
-@author: marri
-"""
-
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 21 19:35:00 2021
-
-@author: marri
-"""
 
 """
+A tracker for traffic which uses location/color/size+direction as distance metric
 Created on Tue Apr 20 15:46:53 2021
-@author: marrit
+@author: Marrit Schellekens
+contact: marritschellekens@yahoo.com
 """
 
 from scipy.spatial import distance as dist
 from collections import OrderedDict
 import numpy as np
-import math
-
-
-import numpy as np
 import cv2
 
-SIZE_DELTA = 0.1 
-DISTANCE_DELTA = 0.6
+SIZE_DELTA = 6
+MAX_COUNT_DIRECTION = 4
+#This option will show the matches that the tracker makes in separate windows. 
+#Press key to continue if this is on. 
 DEBUG = False
 
 class CentroidTracker():
     def __init__(self, maxDisappeared=4):
         self.nextObjectID=0
-        self.objects = OrderedDict()
-        self.yPositions = OrderedDict()
-        self.rectangles = OrderedDict()
+        self.centroids = OrderedDict()
+        self.rects = OrderedDict()
         self.sizes = OrderedDict()
         self.disappeared = OrderedDict()
         self.direction = OrderedDict()
@@ -53,19 +32,19 @@ class CentroidTracker():
         self.classes = OrderedDict()
         self.postStamps = OrderedDict()
         
-    def register(self, centroid, size, class_id, poststamp):
-        self.objects[self.nextObjectID] = centroid
-        self.yPositions[self.nextObjectID] = []
-        
-        yPos = centroid[1] + int(size/2)
-        for x in range(3):
-            self.yPositions[self.nextObjectID].append(yPos)
+    def register(self, centroid, size, class_id, poststamp, rect):
+        self.centroids[self.nextObjectID] = centroid
+        self.rects[self.nextObjectID] = rect
         self.disappeared[self.nextObjectID] = 0
         self.direction[self.nextObjectID] = 0
         self.directionCountForward[self.nextObjectID] = 0
         self.directionCountBackward[self.nextObjectID] = 0
         self.prepareToDeregister[self.nextObjectID] = False
         self.sizes[self.nextObjectID] = []
+        
+        #We want to compare the size with the size of four frames ago. 
+        #Therefore we need to keep track of four sizes. 
+        #To avoid initialization problems we simply add current size four times. 
         for x in range(3):
             self.sizes[self.nextObjectID].append(size)
         self.postStamps[self.nextObjectID] = poststamp
@@ -75,78 +54,38 @@ class CentroidTracker():
         
         
     def deregister(self, objectID):
-        del self.objects[objectID]
-        del self.yPositions[objectID]
+        del self.centroids[objectID]
         del self.disappeared[objectID]
         del self.direction[objectID]
         del self.directionCountForward[objectID]
         del self.directionCountBackward[objectID]
         del self.sizes[objectID]
+        del self.rects[objectID]
         del self.classes[objectID]
         del self.postStamps[objectID]
         del self.prepareToDeregister[objectID]
         print('object ' + str(objectID) + ' disappeared')
         
-
         
-    def updateOrientation(self, newCoordinates, newSize, objectID, poststamp):
-        newSize = newSize
+    def updateOrientation(self, newCoordinates, newSize, objectID):
+        #We use index 0 to create queue like behavior. 
         oldSize = self.sizes[objectID][0]
-        difSize = newSize - oldSize
         
-        notComingTowards = False
-        comingTowards = False
-        delta = SIZE_DELTA * oldSize
-        delta = max(6, delta)
-        delta = 6
-        
-        if newSize > delta + oldSize:
-            comingTowards = True
-        elif newSize + delta < oldSize:
-            notComingTowards = True
-        else:
-            print('nothing')
-            
-        newY = newCoordinates[1] + (int(newSize/2))
-        oldY = self.yPositions[objectID][0]
-        delta = DISTANCE_DELTA * oldSize
-        delta = max(60, delta)
-        delta = 8
-            
-        
-# =============================================================================
-#         
-#         if newY>oldY+delta:
-#               comingTowards = True
-#         elif newY + delta < oldY:
-#             notComingTowards = True
-#         else:
-#             print('nothing')
-#             
-# 
-#         
-# =============================================================================
-        if notComingTowards is True:
-            self.directionCountBackward[objectID] += 1
-        else:
-            self.directionCountBackward[objectID] -= 1
-        
-        if comingTowards is True:
+        if newSize > SIZE_DELTA + oldSize:
             self.directionCountForward[objectID] += 1
         else:
             self.directionCountForward[objectID] -= 1
             
-        
-        
+            if newSize + SIZE_DELTA < oldSize:
+                self.directionCountBackward[objectID] += 1
+            else:
+                self.directionCountBackward[objectID] -= 1
             
-        MAXCOUNT = 4
+   
 
-        if self.directionCountForward[objectID] >= MAXCOUNT:
-           self.directionCountForward[objectID] = MAXCOUNT
+        if self.directionCountForward[objectID] >= MAX_COUNT_DIRECTION:
+           self.directionCountForward[objectID] = MAX_COUNT_DIRECTION
            self.direction[objectID] = 1
-           #if self.direction[objectID] != 1:
-               #self.directionCountBackward[objectID] = 0
-               #self.direction[objectID] = 1
         elif self.directionCountForward[objectID] <= 0:
             self.directionCountForward[objectID] = 0
             if self.direction[objectID] == 1:
@@ -154,12 +93,9 @@ class CentroidTracker():
            
                 
                
-        if self.directionCountBackward[objectID] >= MAXCOUNT:
-           self.directionCountBackward[objectID] = MAXCOUNT
+        if self.directionCountBackward[objectID] >= MAX_COUNT_DIRECTION:
+           self.directionCountBackward[objectID] = MAX_COUNT_DIRECTION
            self.direction[objectID] = -1
-           #if self.direction[objectID] != -1:
-               #self.direction[objectID] = -1
-               #self.directionCountForward[objectID] = 0
         elif self.directionCountBackward[objectID] <= 0:
             self.directionCountBackward[objectID] = 0
             if self.direction[objectID] == -1:
@@ -167,7 +103,7 @@ class CentroidTracker():
 
             
        
-        
+    #Calculate dominant color using k-means clustering    
     def dominantColor(self, img):
         pixels = np.float32(img.reshape(-1, 3))
 
@@ -182,16 +118,70 @@ class CentroidTracker():
         return dominant
     
     
+    
+    def calculateDistanceMatrix(self, inputCentroids, inputSizes, poststamps):
+        objectCentroids = list(self.centroids.values())
+        objectDirections = list(self.direction.values())
+        objectSizes = list(self.sizes.values())
+        objectPoststamps = list(self.postStamps.values())
+
+        objectSizesLast = []
+        for sizeList in objectSizes: (objectSizesLast.append(sizeList[-1]))
+        objectSizesLast = np.array(objectSizesLast)
+        
+        
+        #Calculate distance between all tracked objects and detected objects
+        D_location = dist.cdist(np.array(objectCentroids), inputCentroids)
+        
+        D_color = np.zeros(D_location.shape)
+        D_size = np.zeros(D_location.shape)
+        
+        #Calculate difference between dominant colors
+        for i in range(D_color.shape[0]):
+            for j in range(D_color.shape[1]):
+                 imA = objectPoststamps[i]
+                 imB = poststamps[j]
+            
+                 domColorA = self.dominantColor(imA)
+                 domColorB = self.dominantColor(imB)
+                 domColorDif = max(abs(domColorA - domColorB))
+                 D_color[i][j] = domColorDif
+                
+        #Calculate size difference
+        for i in range(D_size.shape[0]):
+            for j in range(D_size.shape[1]):
+                D_size[i][j] = inputSizes[j] - objectSizesLast[i] 
+        
+        #Take direction into account 
+        #(if tracked vehicle is coming towards the biker, the detected image should be bigger)
+        #(if tracked vehicle is going away from the biker, the detected image should be smaller)
+        #(if tracked vehicle direction is unknown, size difference is absolute)
+        for z in range(D_size.shape[0]):
+            if objectDirections[z] == 0:
+                D_size[z][:] = abs(D_size[z][:])
+            else:
+                D_size[z][:] = D_size[z][:] * objectDirections[z] * -1
+            
+        #Maximum 'bonus' should be -50 to avoid ridiculous matches.     
+        D_size[D_size<-50] = -50     
+            
+        #Weights determined by trial and error, can be changed if desired. 
+        D = D_location + 7*D_color + 1.5*D_size
+        
+        return D, D_location, D_color, D_size
+        
         
     def update(self, rects, classes, poststamps, leaving, entering):
       
+        #Remove ids present in list prepareToDergister. 
+        #This list is used to remove objects from which we know they have left the image. 
         for objectID in list(self.prepareToDeregister.keys()):
             if self.prepareToDeregister[objectID] is True:
                     self.deregister(objectID)
         
         
         
-        
+        #If nothing was detected. 
         if len(rects) == 0:
             for objectID in list(self.disappeared.keys()):
                 self.disappeared[objectID] += 1
@@ -200,8 +190,10 @@ class CentroidTracker():
                     self.deregister(objectID)
                     
                 
-            return self.objects
+            return self.centroids
         
+        
+        #Transform lists into numpy arrays. Transform coordinates of box into centroids.  
         inputCentroids = np.zeros((len(rects), 2), dtype = "int" )
         inputSizes = np.zeros((len(rects), 1), dtype = "int" )
 
@@ -212,103 +204,39 @@ class CentroidTracker():
             inputCentroids[i] = (cX, cY)
             inputSizes[i] = abs(endY-startY)
             
+        #Make sure the dimension is correct.     
         inputSizes = np.atleast_1d(np.squeeze(inputSizes))
         
-        if len(self.objects) == 0:
+        #If we aren't tracking aything: 
+        if len(self.centroids) == 0:
             for i in range(0, len(inputCentroids)):
-                self.register(inputCentroids[i], inputSizes[i], classes[i], poststamps[i])
+                self.register(inputCentroids[i], inputSizes[i], classes[i], poststamps[i], rects[i])
                 
         else:
-            objectIDs = list(self.objects.keys())
-            objectClasses = list(self.classes.values())
-            objectCentroids = list(self.objects.values())
-            objectDirections = list(self.direction.values())
-            objectSizes = list(self.sizes.values())
-            objectPoststamps = list(self.postStamps.values())
-
-            objectSizesLast = []
-            for sizeList in objectSizes: (objectSizesLast.append(sizeList[-1]))
-            objectSizesLast = np.array(objectSizesLast)
-            
-
-            
-
-            D1 = dist.cdist(np.array(objectCentroids), inputCentroids)
-            
-            D3 = np.zeros(D1.shape)
-            for i in range(D3.shape[0]):
-                for j in range(D3.shape[1]):
-                    D3[i][j] = inputSizes[j] - objectSizesLast[i] 
-            
-            for z in range(D3.shape[0]):
-                if objectDirections[z] == 0:
-                    D3[z][:] = abs(D3[z][:])
-                else:
-                    D3[z][:] = D3[z][:] * objectDirections[z] * -1
-                
-            D3[D3<-50] = -50     
-                
-            
-            #objectSizesArray = np.atleast_1d(np.squeeze(np.array(objectSizes)))
-            #D2 = objectSizesArray[:, None] - inputSizes[None, :]
-            #direction_array = np.atleast_2d(np.array(list(self.direction.values())))
-            #for i in range(len(direction_array)):
-                #D2[:, i] = D2[:, i] * direction_array[i]
-                
-            #D2 = D2 * -1
-
-           
-            #D2[D2>0] = 0
-            #D2[D2<0] = 400
-           # D = D1 + D2
-            #print('D1', D1)
-            #print('D', D)
-            #D = D1
-            
-            D2 = np.zeros(D1.shape)
-            for i in range(D2.shape[0]):
-                for j in range(D2.shape[1]):
-                     objectID = objectIDs[i]
-                     imA = objectPoststamps[i]
-                     imB = poststamps[j]
-                    #imB = cv2.resize(imB, dsize=(imA.shape[1], imA.shape[0]), interpolation=cv2.INTER_CUBIC)
-                
-                     domColorA = self.dominantColor(imA)
-                     domColorB = self.dominantColor(imB)
-                     domColorDif = max(abs(domColorA - domColorB))
-                     D2[i][j] = domColorDif
-                     #print('The color difference is: ', domColorDif)
-                    
-                    
-            
-            
-            D = D1 + 7*D2 + 1.5*D3
+            D, D_location, D_color, D_size = self.calculateDistanceMatrix(inputCentroids, inputSizes, poststamps)
+            #Sort matrix so lowest scores are in front. 
             rows = D.min(axis=1).argsort()
             cols = D.argmin(axis=1)[rows]
             
             usedRows = set()
             usedCols = set()
+            objectIDs = list(self.centroids.keys())
+            objectPoststamps = list(self.postStamps.values())
+            
             
             for(row, col) in zip(rows, cols):
                 if row in usedRows or col in usedCols:
                     continue
 
-                #if classes[col] != objectClasses[row]:
-                    #continue
                 objectID = objectIDs[row]    
                 
-                imA = objectPoststamps[row]
-                imB = poststamps[col]
-                sizeImA = math.sqrt(imA.shape[0] * imA.shape[1])
-                sizeImB = math.sqrt(imB.shape[0] * imB.shape[1])
-                #if (D[row][col]> 200):
-                   #continue
+                
                 if DEBUG:
-                    print('sizes are: ' + str(sizeImA) + ', ' + str(sizeImB))
-                    print('distance is: ', D[row][col])
-                    print('\nLocation:  ' + str(D1[row][col]) + 
-                          ' Color: ' + str(D2[row][col]) + 
-                          ' Direction' + str(D3[row][col]))
+                    imA = objectPoststamps[row]
+                    imB = poststamps[col]
+                    print('\nLocation:  ' + str(D_location[row][col]) + 
+                          ' Color: ' + str(D_color[row][col]) + 
+                          ' Direction' + str(D_size[row][col]))
                 
                     cv2.destroyWindow("Old post")
                     cv2.destroyWindow("New post")
@@ -316,35 +244,22 @@ class CentroidTracker():
                     cv2.imshow('New post', imB)
                     cv2.waitKey(0)
                 
-                
-
-               # 
-                #s = ssim(imA, imB, multichannel=True)
-                #print("Similarity score for tracked object " + str(objectID) + " is: " +str(s))
-                
-                #if s < 0.3:
-                    
-                     #continue
-           
-                #print("Sizes for id " + str(objectID) + " are " + str(self.sizes[objectID]))
-                
+                #Remove vehicles that are leaving the frame in the next iteration
                 if leaving[col] is True:
                     self.prepareToDeregister[objectID] = True
                     print('DEREGISTER CAR BECAUSE OF PASSING, ID: ', objectID)
                 
+                #update Variables
+                
+                #To avoid wrong direction updates, we do not update when the car is entering the frame from the front of bike. 
                 if entering[col] is False:
-                    self.updateOrientation(inputCentroids[col], inputSizes[col], objectID, poststamps[col])
-                self.objects[objectID] = inputCentroids[col]
+                    self.updateOrientation(inputCentroids[col], inputSizes[col], objectID)
+                self.centroids[objectID] = inputCentroids[col]
+                self.rects[objectID] = rects[col]
                 self.postStamps[objectID] = poststamps[col]
                 self.sizes[objectID].pop(0)
                 self.sizes[objectID].append(inputSizes[col])
-                yPos = inputCentroids[col][1] + int(inputSizes[col]/2)
-                self.yPositions[objectID].pop(0)
-                self.yPositions[objectID].append(yPos)
-                
                 self.disappeared[objectID] = 0
-                
-                
                 
                 usedRows.add(row)
                 usedCols.add(col)
@@ -352,6 +267,7 @@ class CentroidTracker():
             unusedRows = set(range(0, D.shape[0])).difference(usedRows)
             unusedCols = set(range(0, D.shape[1])).difference(usedCols)
             
+            #When we detect less objects than we have tracked, update disappeared counter and deregister if necessary. 
             if D.shape[0] >= D.shape[1]:
                 for row in unusedRows:
                     
@@ -360,11 +276,12 @@ class CentroidTracker():
                     
                     if self.disappeared[objectID] > self.maxDisappeared:
                         self.deregister(objectID)
+            #When we detect more objects than we have tracked, register new objects           
             else:
                 for col in unusedCols:
-                    self.register(inputCentroids[col], inputSizes[col], classes[col], poststamps[col])
+                    self.register(inputCentroids[col], inputSizes[col], classes[col], poststamps[col], rects[col])
 
-        return self.objects
+        return self.rects
     
     def returnDirections(self):
         return self.direction

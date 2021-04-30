@@ -19,7 +19,7 @@ try:
 except OSError as e:
     raise SystemExit('ERROR: failed to load ./plugins/libyolo_layer.so.  '
                      'Did you forget to do a "make" in the "./plugins/" '
-                     'subdirectory?') from e
+                     'subdirectory?')
 
 
 def get_input_shape(model_name):
@@ -304,7 +304,7 @@ class TrtYOLO(object):
             self.inputs, self.outputs, self.bindings, self.stream = \
                 allocate_buffers(self.engine)
         except Exception as e:
-            raise RuntimeError('fail to allocate CUDA resources') from e
+            raise RuntimeError('fail to allocate CUDA resources')
         finally:
             if self.cuda_ctx:
                 self.cuda_ctx.pop()
