@@ -10,7 +10,7 @@ import time
 
 
 
-def drawTracking(img, objects, rects, directions):
+def drawTracking(img, objects,  directions):
     
     colors = np.zeros([3,3])
     colors[2] = [0, 0, 255]
@@ -19,12 +19,11 @@ def drawTracking(img, objects, rects, directions):
 
 
     for key, rect in objects.items():
-        if rect in rects:
-            direction = directions[key]
-            p1 = (int(rect[0]), int(rect[1]))
-            p2 = (int(rect[2]), int(rect[3]))
-            cv2.rectangle(img, p1, p2, colors[direction+1], 2)
-            cv2.putText(img, str(key), (p1[0], p1[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50,255,50), 2)
+        direction = directions[key]
+        p1 = (int(rect[0]), int(rect[1]))
+        p2 = (int(rect[2]), int(rect[3]))
+        cv2.rectangle(img, p1, p2, colors[direction+1], 2)
+        cv2.putText(img, str(key), (p1[0], p1[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (50,255,50), 2)
 
     return img
 
@@ -64,7 +63,17 @@ def update_fps(tic, fps):
     tic = toc
     return tic, fps
 
-def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
+def filter_not_detected(tracked, detected):
+    deleteindexes = []
+    for key, car in tracked.items():
+        if car not in detected:
+            deleteindexes.append(key)
+            
+    for key in deleteindexes:
+        tracked.pop(key)        
+    return tracked
+
+def detect_and_track(frame, trt_yolo, classes, tracker, hw_func, frame_nr, storage):
         frame_detection = frame.copy()
         rects, class_ids = hw_func.detect_cars(frame_detection, trt_yolo)
         frame_detection = draw_predictions(frame_detection, class_ids, rects, classes)
@@ -99,11 +108,15 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
               poststamps.append(frame[y:y_plus_h, x:x_plus_w])
 
         ids = tracker.update(rects, class_ids, poststamps, leaving, entering)
+        ids = filter_not_detected(ids.copy(), rects)
         directions = tracker.returnDirections()
         
         frame_tracking = frame.copy()
-        frame_tracking = drawTracking(frame_tracking, ids, rects, directions)
+        frame_tracking = drawTracking(frame_tracking, ids, directions)
+        storage.update(frame_nr, ids, directions)
         return frame_detection, frame_tracking
+    
+
 
 
     

@@ -1,6 +1,28 @@
 from utils.camera import add_camera_args, Camera
 import argparse
+import os
+import cv2
 from utils.yolo_with_plugins import get_input_shape, TrtYOLO
+
+
+import cv2
+from utils.camera import Camera
+
+
+
+import os
+import time
+
+from utils.display import open_window, set_display, show_fps
+
+import CentroidTracker
+import pycuda.autoinit #This is needed for intilazing CUDA driver
+import Jetson_functions as hw_functions
+import helper_functions as functions
+from utils.yolo_classes import get_cls_dict
+from utils.yolo_with_plugins import get_input_shape, TrtYOLO
+
+
 
 CONF_TH = 0.3
 
@@ -31,6 +53,31 @@ def parse_args(VIDEO_FILE, CAMERA=False):
         args = parser.parse_args(['--video', VIDEO_FILE])
     return args
 class jetson:
+
+	def __init__(self):
+		self.cam = None
+
+	def get_frame(self):       	 	
+		img = self.cam.read()
+
+		if img is None:
+            		success = False
+		else:
+			success = True
+		return img, success
+
+	def init_cam(self, VIDEO_FILE, CAMERA):
+		args = parse_args(VIDEO_FILE, CAMERA)
+		if args.category_num <= 0:
+			raise SystemExit('ERROR: bad category_num (%d)!' % args.category_num)
+		if not os.path.isfile('yolo/%s.trt' % args.model):
+			raise SystemExit('ERROR: file (yolo/%s.trt) not found!' % args.model)
+
+		self.cam = Camera(args)
+		if not self.cam.isOpened():
+        		raise SystemExit('ERROR: failed to open camera!')
+		print('Initalized camera')
+		return cam	
 
 	def detect_cars(self, frame, trt_yolo):
     		rects, confs, class_ids = trt_yolo.detect(frame, CONF_TH)
