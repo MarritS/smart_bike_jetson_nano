@@ -117,6 +117,15 @@ class CentroidTracker():
         dominant = palette[np.argmax(counts)]
         return dominant
     
+    def averageColor(self, img):
+        print('test')
+        colors = np.zeros(3)
+        for i in range(0, 3):
+            res = np.sum(img[:,:,0], 1)
+            res2 = sum(res)
+            res3 = res2 / (img.shape[0]*img.shape[1])
+            colors[i] = res3
+        return colors
     
     
     def calculateDistanceMatrix(self, inputCentroids, inputSizes, poststamps):
@@ -142,8 +151,8 @@ class CentroidTracker():
                  imA = objectPoststamps[i]
                  imB = poststamps[j]
             
-                 domColorA = self.dominantColor(imA)
-                 domColorB = self.dominantColor(imB)
+                 domColorA = self.averageColor(imA)
+                 domColorB = self.averageColor(imB)
                  domColorDif = max(abs(domColorA - domColorB))
                  D_color[i][j] = domColorDif
                 

@@ -73,7 +73,7 @@ def filter_not_detected(tracked, detected):
         tracked.pop(key)        
     return tracked
 
-def detect_and_track(frame, trt_yolo, classes, tracker, hw_func, frame_nr, storage):
+def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         frame_detection = frame.copy()
         rects, class_ids = hw_func.detect_cars(frame_detection, trt_yolo)
         frame_detection = draw_predictions(frame_detection, class_ids, rects, classes)
@@ -113,7 +113,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func, frame_nr, stora
         
         frame_tracking = frame.copy()
         frame_tracking = drawTracking(frame_tracking, ids, directions)
-        storage.update(frame_nr, ids, directions)
+        #storage.update(frame_nr, ids, directions)
         return frame_detection, frame_tracking
     
 

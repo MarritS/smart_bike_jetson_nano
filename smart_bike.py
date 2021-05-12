@@ -31,7 +31,7 @@ from utils.yolo_with_plugins import get_input_shape, TrtYOLO
 
 
 
-CAMERA = False
+CAMERA = True
 VIDEO_FILE = "/home/marrit/Videos/city_moving2.mp4" 
 SIMULATED_FPS = 7
 WINDOW_NAME = "tracking"
