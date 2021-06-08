@@ -9,6 +9,7 @@ Created on Thu May  6 11:44:48 2021
 import serial
 import time
 import timeit
+#arduino = serial.Serial(port='COM11', baudrate=115200, timeout=.1)
 arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 def write_read(x):
     print('wrote: ', x)

@@ -4,10 +4,18 @@ Created on Mon May 10 10:03:04 2021
 
 @author: marri
 """
+VIBRATE = True
+
 import cv2
 import numpy as np
 import time
+import sys
+if VIBRATE:
+    import vibrate
 
+def shutdown_vibration():
+    if VIBRATE:
+        vibrate.close()
 
 
 def drawTracking(img, objects,  directions):
@@ -110,6 +118,9 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         ids = tracker.update(rects, class_ids, poststamps, leaving, entering)
         ids = filter_not_detected(ids.copy(), rects)
         directions = tracker.returnDirections()
+        
+        if VIBRATE:
+            vibrate.perform_output(ids, directions)
         
         frame_tracking = frame.copy()
         frame_tracking = drawTracking(frame_tracking, ids, directions)
