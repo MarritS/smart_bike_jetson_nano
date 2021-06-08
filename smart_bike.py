@@ -28,12 +28,15 @@ import Jetson_functions as hw_functions
 import helper_functions as functions
 from utils.yolo_classes import get_cls_dict
 from utils.yolo_with_plugins import get_input_shape, TrtYOLO
+import shared_space_detector
+import roadTypeTracker
 
 
 
-CAMERA = True
-VIDEO_FILE = "/home/marrit/Videos/city_moving2.mp4" 
+CAMERA = False
+VIDEO_FILE = "/home/marrit/Videos/00108.mp4" 
 SIMULATED_FPS = 7
+FPS_SS = 0.3
 WINDOW_NAME = "tracking"
 
 
@@ -43,23 +46,32 @@ def loop_and_detect(cam, trt_yolo, classes, writer):
     fps = 0.0
     tic = time.time()
     framecounter = 0
+
     frameskip = round(30/SIMULATED_FPS)
+    frameskip_ss = round(30/FPS_SS)
     hw_func = hw_functions.jetson()
     tracker = CentroidTracker.CentroidTracker()
+    tracker_ss = roadTypeTracker.roadTypeTracker()
     
     
     
     while True:
+        print('frame:' + str(framecounter))
+        
         if cv2.getWindowProperty(WINDOW_NAME, 0) < 0:
             break
         img = cam.read()
         if img is None:
             break
         
+        if framecounter % frameskip_ss == 0:
+            separated_bikepath = tracker_ss.update(img)
+            
+        
         if CAMERA:
-            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer)
+            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, separated_bikepath)
         elif framecounter % frameskip == 0:
-            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer)
+            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, separated_bikepath)
         
         
         framecounter+=1
@@ -71,11 +83,15 @@ def loop_and_detect(cam, trt_yolo, classes, writer):
             set_display('test', full_scrn)
 
  
-def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer):
+def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, sep_path):
     tic, fps = functions.update_fps(tic, fps)
-    frame_detection, frame_tracking = functions.detect_and_track(img, trt_yolo, classes, tracker,hw_func)
-    frame_tracking = show_fps(frame_tracking, fps)
-    frame_tracking = cv2.resize(frame_tracking, (800, 600))
+    if not sep_path:
+        frame_detection, frame_tracking = functions.detect_and_track(img, trt_yolo, classes, tracker,hw_func)
+        frame_tracking = show_fps(frame_tracking, fps)
+        frame_tracking = cv2.resize(frame_tracking, (800, 600))
+    else:
+        frame_detection = img
+        frame_tracking = functions.drawTracking_separated(img)
     cv2.imshow(WINDOW_NAME, frame_tracking)
     writer.write(frame_tracking)
     return tic, fps

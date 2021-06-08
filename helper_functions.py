@@ -4,12 +4,13 @@ Created on Mon May 10 10:03:04 2021
 
 @author: marri
 """
-VIBRATE = True
+VIBRATE = False
 
 import cv2
 import numpy as np
 import time
 import sys
+
 if VIBRATE:
     import vibrate
 
@@ -17,6 +18,9 @@ def shutdown_vibration():
     if VIBRATE:
         vibrate.close()
 
+def drawTracking_separated(img):
+    frame_text = cv2.putText(img, str('Separated road, stopped detection'), (80, 80),cv2.FONT_HERSHEY_DUPLEX, 2, (50,255,50), 2 )
+    return frame_text
 
 def drawTracking(img, objects,  directions):
     
@@ -40,6 +44,8 @@ def draw_predictions(img, class_ids, vehicles, classes_description):
         img = draw_prediction(img, class_ids[i], rect[0], rect[1], rect[2], rect[3], classes_description)
     
     return img
+
+
         
 
 def draw_prediction(img, class_id, x, y, x_plus_w, y_plus_h, classes_description):
