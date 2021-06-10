@@ -23,6 +23,7 @@ import time
 from utils.display import open_window, set_display, show_fps
 
 import CentroidTracker
+import multiprocessing as mp
 import pycuda.autoinit #This is needed for intilazing CUDA driver
 import Jetson_functions as hw_functions
 import helper_functions as functions
@@ -123,4 +124,5 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':
+    mp.freeze_support()
     main()
