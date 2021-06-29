@@ -31,12 +31,13 @@ from utils.yolo_classes import get_cls_dict
 from utils.yolo_with_plugins import get_input_shape, TrtYOLO
 import shared_space_detector
 import roadTypeTracker
+import VariableWriter
 
 
 
-CAMERA = False
+CAMERA = True
 VIDEO_FILE = "/home/marrit/Videos/00108.mp4" 
-SIMULATED_FPS = 7
+SIMULATED_FPS = 10
 FPS_SS = 0.3
 WINDOW_NAME = "tracking"
 
@@ -94,7 +95,7 @@ def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, sep_path)
         frame_detection = img
         frame_tracking = functions.drawTracking_separated(img)
     cv2.imshow(WINDOW_NAME, frame_tracking)
-    writer.write(frame_tracking)
+    #writer.write(frame_tracking)
     return tic, fps
 
 def main():
@@ -114,11 +115,20 @@ def main():
 
     fourcc = cv2.VideoWriter_fourcc(*"MP4V")
     #When using camera, and you want the file saved, adjust size parameters
-    writer = cv2.VideoWriter('output.mp4', fourcc, SIMULATED_FPS, (800, 600), True)
+    #VIDEO_NAME = "/media/marrit/E61E-23E2/output_" + 'TIME' + ".mp4"
+    VIDEO_NAME = "/home/marrit/project/tensorrt_demos/output_" + 'TIME' + ".mp4"
+    frame_width = 800
+    frame_height = 600
+
+    writer = cv2.VideoWriter(VIDEO_NAME, cv2.VideoWriter_fourcc(*"mp4v"), SIMULATED_FPS, (frame_width, frame_height))
+    varWriter = VariableWriter.VariableWriter(SIMULATED_FPS, writer)
+    
+    
+    #writer = cv2.VideoWriter('output.mp4', fourcc, SIMULATED_FPS, (800, 600), True)
     open_window(  
         WINDOW_NAME, 'Camera TensorRT YOLO Demo',
         cam.img_width, cam.img_height)
-    loop_and_detect(cam, trt_yolo, cls_dict, writer=writer)
+    loop_and_detect(cam, trt_yolo, cls_dict, writer=varWriter)
 
     cam.release()
     cv2.destroyAllWindows()

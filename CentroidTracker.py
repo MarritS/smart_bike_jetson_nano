@@ -118,7 +118,6 @@ class CentroidTracker():
         return dominant
     
     def averageColor(self, img):
-        print('test')
         colors = np.zeros(3)
         for i in range(0, 3):
             res = np.sum(img[:,:,0], 1)
