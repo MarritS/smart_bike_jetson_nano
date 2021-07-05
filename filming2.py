@@ -11,6 +11,8 @@ import Jetson_functions as hw_functions
 import os
 from utils.camera import Camera
 
+
+
 args = hw_functions.parse_args('nothing', True)
 if args.category_num <= 0:
     raise SystemExit('ERROR: bad category_num (%d)!' % args.category_num)
@@ -21,8 +23,8 @@ capture = Camera(args)
 if not capture.isOpened():
     raise SystemExit('ERROR: failed to open camera!')
  
-fourcc = cv2.VideoWriter_fourcc('X','V','I','D')
-videoWriter = cv2.VideoWriter('/home/marrit/Videos/test.avi', fourcc, 30.0, (640,480))
+fourcc = cv2.VideoWriter_fourcc(*'MP4V')
+videoWriter = cv2.VideoWriter('/home/marrit/Videos/test.mp4', fourcc, 30.0, (640,480))
  
 while (True):
  
