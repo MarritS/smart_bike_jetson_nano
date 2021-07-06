@@ -36,8 +36,8 @@ import roadTypeTracker
 
 
 CAMERA = True
-VIDEO_FILE = "/home/marrit/Videos/00108.mp4" 
-SIMULATED_FPS = 10
+VIDEO_FILE = "/home/marrit/Videos/test2.mp4" 
+SIMULATED_FPS = 6
 FPS_SS = 0.3
 WINDOW_NAME = "tracking"
 
@@ -49,14 +49,14 @@ def loop_and_detect(cam, trt_yolo, classes):
     tic = time.time()
     framecounter = 0
 
-    frameskip = round(30/SIMULATED_FPS)
-    frameskip_ss = round(30/FPS_SS)
+    frameskip = round(6/SIMULATED_FPS)
+    frameskip_ss = round(6/FPS_SS)
     hw_func = hw_functions.jetson()
     tracker = CentroidTracker.CentroidTracker()
     tracker_ss = roadTypeTracker.roadTypeTracker()
     
     
-    
+    start = time.time()
     while True:
         print('frame:' + str(framecounter))
         
@@ -83,6 +83,9 @@ def loop_and_detect(cam, trt_yolo, classes):
         elif key == ord('F') or key == ord('f'):  # Toggle fullscreen
             full_scrn = not full_scrn
             set_display('test', full_scrn)
+        end = time.time()
+        while (end-start < framecounter/SIMULATED_FPS) and CAMERA==False:
+            end = time.time()
 
  
 def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, sep_path):

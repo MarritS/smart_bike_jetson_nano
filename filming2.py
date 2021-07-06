@@ -11,8 +11,15 @@ import Jetson_functions as hw_functions
 import os
 import time
 from utils.camera import Camera
-FRAMERATE = 6
 
+def returnNameFile():
+	start = time.time()
+	name = '/home/marrit/Videos/output_' + str(start) + '.mp4'
+	return name
+
+#High framerates might not be saved properly because of delays.
+FRAMERATE = 6
+VIDEO_LEN = 5 #In minutes
 
 
 args = hw_functions.parse_args('nothing', True)
@@ -26,7 +33,8 @@ if not capture.isOpened():
     raise SystemExit('ERROR: failed to open camera!')
  
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-videoWriter = cv2.VideoWriter('/home/marrit/Videos/test.mp4', fourcc, FRAMERATE, (800,600))
+
+videoWriter = cv2.VideoWriter(returnNameFile(), fourcc, FRAMERATE, (800,600))
 start = time.time() 
 frame_cnt = 0
 while (True):
@@ -43,7 +51,12 @@ while (True):
     end = time.time()
     while(end-start<frame_cnt/FRAMERATE):
         end = time.time()
-        print('waiting')	
+
+    if end-start>VIDEO_LEN * 60:
+        videoWriter.release()
+        videoWriter = cv2.VideoWriter(returnNameFile(), fourcc, FRAMERATE, (800,600))
+        start = time.time() 
+        frame_cnt = 0 	
  
     if cv2.waitKey(1) == 27:
         break
@@ -52,3 +65,5 @@ capture.release()
 videoWriter.release()
  
 cv2.destroyAllWindows()
+
+
