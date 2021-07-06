@@ -31,7 +31,7 @@ from utils.yolo_classes import get_cls_dict
 from utils.yolo_with_plugins import get_input_shape, TrtYOLO
 import shared_space_detector
 import roadTypeTracker
-import VariableWriter
+#import VariableWriter
 
 
 
@@ -43,7 +43,7 @@ WINDOW_NAME = "tracking"
 
 
  
-def loop_and_detect(cam, trt_yolo, classes, writer):
+def loop_and_detect(cam, trt_yolo, classes):
     full_scrn = False
     fps = 0.0
     tic = time.time()
@@ -66,14 +66,14 @@ def loop_and_detect(cam, trt_yolo, classes, writer):
         if img is None:
             break
         
-        if framecounter % frameskip_ss == 0:
-            separated_bikepath = tracker_ss.update(img)
+        #if framecounter % frameskip_ss == 0:
+            #separated_bikepath = tracker_ss.update(img)
             
         
         if CAMERA:
-            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, separated_bikepath)
+            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, False)
         elif framecounter % frameskip == 0:
-            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, separated_bikepath)
+            tic, fps = update(tic, fps, img, trt_yolo, classes, tracker, hw_func, False)
         
         
         framecounter+=1
@@ -85,7 +85,7 @@ def loop_and_detect(cam, trt_yolo, classes, writer):
             set_display('test', full_scrn)
 
  
-def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, writer, sep_path):
+def update(tic, fps, img, trt_yolo, classes, tracker, hw_func, sep_path):
     tic, fps = functions.update_fps(tic, fps)
     if not sep_path:
         frame_detection, frame_tracking = functions.detect_and_track(img, trt_yolo, classes, tracker,hw_func)
@@ -113,22 +113,22 @@ def main():
     h, w = get_input_shape(args.model)
     trt_yolo = TrtYOLO(args.model, (h, w), args.category_num, args.letter_box)
 
-    fourcc = cv2.VideoWriter_fourcc(*"MP4V")
+    #fourcc = cv2.VideoWriter_fourcc(*"MP4V")
     #When using camera, and you want the file saved, adjust size parameters
     #VIDEO_NAME = "/media/marrit/E61E-23E2/output_" + 'TIME' + ".mp4"
     VIDEO_NAME = "/home/marrit/project/tensorrt_demos/output_" + 'TIME' + ".mp4"
     frame_width = 800
     frame_height = 600
 
-    writer = cv2.VideoWriter(VIDEO_NAME, cv2.VideoWriter_fourcc(*"mp4v"), SIMULATED_FPS, (frame_width, frame_height))
-    varWriter = VariableWriter.VariableWriter(SIMULATED_FPS, writer)
+    #writer = cv2.VideoWriter(VIDEO_NAME, cv2.VideoWriter_fourcc(*"mp4v"), SIMULATED_FPS, (frame_width, frame_height))
+    #varWriter = VariableWriter.VariableWriter(SIMULATED_FPS, writer)
     
     
     #writer = cv2.VideoWriter('output.mp4', fourcc, SIMULATED_FPS, (800, 600), True)
     open_window(  
         WINDOW_NAME, 'Camera TensorRT YOLO Demo',
         cam.img_width, cam.img_height)
-    loop_and_detect(cam, trt_yolo, cls_dict, writer=varWriter)
+    loop_and_detect(cam, trt_yolo, cls_dict)
 
     cam.release()
     cv2.destroyAllWindows()
