@@ -9,7 +9,9 @@ Created on Mon Jul  5 16:22:45 2021
 import cv2
 import Jetson_functions as hw_functions
 import os
+import time
 from utils.camera import Camera
+FRAMERATE = 6
 
 
 
@@ -24,17 +26,24 @@ if not capture.isOpened():
     raise SystemExit('ERROR: failed to open camera!')
  
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-videoWriter = cv2.VideoWriter('/home/marrit/Videos/test.mp4', fourcc, 30.0, (640,480))
- 
+videoWriter = cv2.VideoWriter('/home/marrit/Videos/test.mp4', fourcc, FRAMERATE, (800,600))
+start = time.time() 
+frame_cnt = 0
 while (True):
  
+    	
     frame = capture.read()
     
      
     if frame is not None:
-        frame = cv2.resize(frame, (640, 480))
+        frame = cv2.resize(frame, (800, 600))
         cv2.imshow('video', frame)
         videoWriter.write(frame)
+        frame_cnt += 1
+    end = time.time()
+    while(end-start<frame_cnt/FRAMERATE):
+        end = time.time()
+        print('waiting')	
  
     if cv2.waitKey(1) == 27:
         break
