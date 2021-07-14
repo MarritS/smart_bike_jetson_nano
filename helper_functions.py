@@ -11,6 +11,8 @@ import numpy as np
 import time
 import sys
 
+desired_classes = [0,1,2,3,5,7]
+
 if VIBRATE:
     import vibrate
     vibration = vibrate.Vibration()
@@ -54,7 +56,6 @@ def draw_prediction(img, class_id, x, y, x_plus_w, y_plus_h, classes_description
 
     label = str(classes_description[class_id])
     
-    
     size = (x_plus_w - x) * (y_plus_h - y)
 
     color = (40, 40, min(size/100, 255))
@@ -92,9 +93,16 @@ def filter_not_detected(tracked, detected):
 def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         frame_detection = frame.copy()
         rects, class_ids = hw_func.detect_cars(frame_detection, trt_yolo)
-        frame_detection = draw_predictions(frame_detection, class_ids, rects, classes)
+	
+        not_vehicles = []
+        for count, value in enumerate(list(class_ids)):
+
+             if int(value) not in desired_classes:
+                 not_vehicles.append(count)
         
-        
+        rects = np.delete(rects, not_vehicles,0)
+        class_ids = np.delete(class_ids, not_vehicles)
+
         poststamps=[]
         leaving = []
         entering = []
@@ -132,6 +140,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         
         frame_tracking = frame.copy()
         frame_tracking = drawTracking(frame_tracking, ids, directions)
+        frame_detection = draw_predictions(frame_detection, class_ids, rects, classes)
         #storage.update(frame_nr, ids, directions)
         return frame_detection, frame_tracking
     
