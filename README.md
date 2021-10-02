@@ -1,3 +1,6 @@
+This is a smart vision project for bicycles. It was build upon an existing project for yolo (and other neural networks) on Jetson Nano. That original readme can be found below. In the future I will probably take some time to clean up this code and remove the parts that I don't use. 
+
+
 # tensorrt_demos
 
 Examples demonstrating how to optimize caffe/tensorflow/darknet models with TensorRT and run inferencing on NVIDIA Jetson or x86_64 PC platforms.
