@@ -1,4 +1,10 @@
-This is a smart vision project for bicycles. It was build upon an existing project for yolo (and other neural networks) on Jetson Nano. That original readme can be found below. In the future I will probably take some time to clean up this code and readme and remove the parts that I don't use. 
+# introduction 
+
+This is a smart vision project for bicycles. It was build upon an existing project for yolo (and other neural networks) on Jetson Nano. That original readme can be found below. Since it contains support for multiple types of neural network and I only use YOLO, there is a lot of code that isn't necessary. However, I didn't have the time to clean this out. For the instructions below you only have to follow prerequisite and the demo 5 instructions.The YOLO version I used is  yolov4-csp-256.
+
+The main program is found in smart_bike.py, and can be run with the command sudo python3 smart_bike.py. It is configured to use a video file contained in this directory. Within the first few lines of smart_bike.py, you can change it to use the camera instead, as well as various other options. 
+
+Originally there was the ability to also run the program on a windows 10 computer. However, I did not upkeep this code, and it is now probably not funcitonal anymore. An attempt was made to contain most Jetson specific code in the file Jetson_functions.py.
 
 
 # tensorrt_demos
