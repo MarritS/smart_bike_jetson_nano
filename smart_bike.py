@@ -4,6 +4,7 @@
 Created on Thu Apr 15 14:30:34 2021
 
 @author: marrit
+contact: marritschellekens@yahoo.com
 """
 
 """smart_bike.py
@@ -20,6 +21,8 @@ WRITE_TO_FILE = False
 VIDEO_FILE = "videos/d_raw.mp4" 
 #The simulated fps when analyzing a video file. Ignored when using camera. 
 SIMULATED_FPS = 6
+#Shows the matches made by the tracker, and prints the metric values. Press space to go to the next match. 
+SHOW_MATCHES = False
 WINDOW_NAME = "tracking"
 
 import cv2
@@ -45,7 +48,7 @@ def loop_and_detect(cam, trt_yolo, classes, writer):
 
     frameskip = round(6/SIMULATED_FPS)
     hw_func = hw_functions.jetson()
-    tracker = CentroidTracker.CentroidTracker()
+    tracker = CentroidTracker.CentroidTracker(m_DEBUG=SHOW_MATCHES)
     
     start = time.time()
     while True:

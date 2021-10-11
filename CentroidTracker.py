@@ -15,16 +15,22 @@ SIZE_DELTA = 6
 MAX_COUNT_DIRECTION = 4
 #This option will show the matches that the tracker makes in separate windows. 
 #Press key to continue if this is on. 
-DEBUG = False
 
 class CentroidTracker():
-    def __init__(self, maxDisappeared=4):
+
+    def __init__(self, maxDisappeared=4, m_DEBUG=False):
+	#This option will show the matches that the tracker makes in separate windows. 
+	#Press key to continue if this is on. 
+        self.DEBUG = m_DEBUG
         self.nextObjectID=0
+	#Coordinates of center.
         self.centroids = OrderedDict()
+	#x, y width and length (not sure about order)
         self.rects = OrderedDict()
         self.sizes = OrderedDict()
         self.disappeared = OrderedDict()
         self.direction = OrderedDict()
+	#To avoid shrinking boxes when leaving frame counting as moving away, we deregister them before it happens
         self.prepareToDeregister = OrderedDict()
         self.directionCountForward = OrderedDict()
         self.directionCountBackward = OrderedDict()
@@ -103,7 +109,7 @@ class CentroidTracker():
 
             
        
-    #Calculate dominant color using k-means clustering    
+    #Calculate dominant color using k-means clustering. Not used anymore because it takes a lot of time.    
     def dominantColor(self, img):
         pixels = np.float32(img.reshape(-1, 3))
 
@@ -117,6 +123,7 @@ class CentroidTracker():
         dominant = palette[np.argmax(counts)]
         return dominant
     
+
     def averageColor(self, img):
         colors = np.zeros(3)
         for i in range(0, 3):
@@ -133,6 +140,7 @@ class CentroidTracker():
         objectSizes = list(self.sizes.values())
         objectPoststamps = list(self.postStamps.values())
 
+	#Get last found sizes. 
         objectSizesLast = []
         for sizeList in objectSizes: (objectSizesLast.append(sizeList[-1]))
         objectSizesLast = np.array(objectSizesLast)
@@ -140,11 +148,11 @@ class CentroidTracker():
         
         #Calculate distance between all tracked objects and detected objects
         D_location = dist.cdist(np.array(objectCentroids), inputCentroids)
-        
+        #Initialize the other metric matrices.
         D_color = np.zeros(D_location.shape)
         D_size = np.zeros(D_location.shape)
         
-        #Calculate difference between dominant colors
+        #Calculate difference between average colors
         for i in range(D_color.shape[0]):
             for j in range(D_color.shape[1]):
                  imA = objectPoststamps[i]
@@ -239,15 +247,15 @@ class CentroidTracker():
                 objectID = objectIDs[row]    
                 
                 
-                if DEBUG:
+                if self.DEBUG:
                     imA = objectPoststamps[row]
                     imB = poststamps[col]
                     print('\nLocation:  ' + str(D_location[row][col]) + 
                           ' Color: ' + str(D_color[row][col]) + 
                           ' Direction' + str(D_size[row][col]))
                 
-                    cv2.destroyWindow("Old post")
-                    cv2.destroyWindow("New post")
+                    #cv2.destroyWindow("Old post")
+                    #cv2.destroyWindow("New post")
                     cv2.imshow('Old post', imA)
                     cv2.imshow('New post', imB)
                     cv2.waitKey(0)
