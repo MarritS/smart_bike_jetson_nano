@@ -37,7 +37,7 @@ import roadTypeTracker
 
 CAMERA = False
 WRITE_TO_FILE = True
-VIDEO_FILE = "/home/marrit/Videos/a.mp4" 
+VIDEO_FILE = "videos/d_raw.mp4" 
 SIMULATED_FPS = 6
 FPS_SS = 0.3
 WINDOW_NAME = "tracking"
