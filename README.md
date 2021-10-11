@@ -4,9 +4,9 @@ This is a smart vision project for bicycles. It was build upon an existing proje
 
 The main program is found in smart_bike.py, and can be run with the command sudo python3 smart_bike.py. It is configured to use a video file contained in this directory. Within the first few lines of smart_bike.py, you can change it to use the camera instead, as well as various other options. 
 
-Originally there was the ability to also run the program on a windows 10 computer. However, I did not upkeep this code, and it is now probably not funcitonal anymore. An attempt was made to contain most Jetson specific code in the file Jetson_functions.py.
+Originally there was the ability to also run the program on a windows 10 computer. However, I did not upkeep this code, and it is now probably not funcitonal anymore. A (bad) attempt was made to contain most Jetson specific code in the file Jetson_functions.py.
 
-
+The tracking algorithm is build upon this [link](https://www.pyimagesearch.com/2018/07/23/simple-object-tracking-with-opencv/). Reading that article should give a good starting point. 
 # tensorrt_demos
 
 Examples demonstrating how to optimize caffe/tensorflow/darknet models with TensorRT and run inferencing on NVIDIA Jetson or x86_64 PC platforms.
