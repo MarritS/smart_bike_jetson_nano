@@ -13,8 +13,6 @@ import cv2
 
 SIZE_DELTA = 6
 MAX_COUNT_DIRECTION = 4
-#This option will show the matches that the tracker makes in separate windows. 
-#Press key to continue if this is on. 
 
 class CentroidTracker():
 

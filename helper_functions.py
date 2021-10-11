@@ -2,8 +2,9 @@
 """
 Created on Mon May 10 10:03:04 2021
 
-@author: marri
+@author: Marrit Schellekens
 """
+#If the arduino is connected to the Jetson, set Vibrate to True
 VIBRATE = False
 
 import cv2
@@ -11,8 +12,12 @@ import numpy as np
 import time
 import sys
 
+#Yolo labels that correspond to vehicles
 desired_classes = [0,1,2,3,5,7]
 
+#Serial import autoinitializes the serial connection. 
+    	#Therefore only import if Serial hardware is actually being written to. 
+    
 if VIBRATE:
     import vibrate
     vibration = vibrate.Vibration()
@@ -94,6 +99,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         frame_detection = frame.copy()
         rects, class_ids = hw_func.detect_cars(frame_detection, trt_yolo)
 	
+	#Remove detected objects that aren't vehicles
         not_vehicles = []
         for count, value in enumerate(list(class_ids)):
 
@@ -103,6 +109,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
         rects = np.delete(rects, not_vehicles,0)
         class_ids = np.delete(class_ids, not_vehicles)
 
+	#Create the lists of cars entering or leaving the frame. Also create a list of the images of the vehicle. 
         poststamps=[]
         leaving = []
         entering = []
@@ -130,7 +137,7 @@ def detect_and_track(frame, trt_yolo, classes, tracker, hw_func):
                       
                   
               poststamps.append(frame[y:y_plus_h, x:x_plus_w])
-
+	#Associate detected vehicles with tracked vehicles
         ids = tracker.update(rects, class_ids, poststamps, leaving, entering)
         ids = filter_not_detected(ids.copy(), rects)
         directions = tracker.returnDirections()

@@ -12,9 +12,6 @@ class Vibration():
 		self.last_output = 0
 	
 	def perform_output(self, rects, directions):
-    	#Serial import autoinitializes the serial connection. 
-    	#Therefore only import if Serial hardware is actually being written to. 
-    
 		max_size = 0
     
     	#Find max size
